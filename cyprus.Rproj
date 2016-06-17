@@ -1,13 +1,191 @@
-Version: 1.0
+#mean. std. var,plot, done just incase it will be needed later on
+CYPR<- CYP$returns
+CYPR
+length(CYPR)
+cy<-as.ts( CYPR)
+cy
+plot(cy)
+mu<-mean(cy)
+mu
+sdcy<-sd(cy)
+sdcy
+z<-(cy-mu)/sdcy
+plot(z)
 
-RestoreWorkspace: Default
-SaveWorkspace: Default
-AlwaysSaveHistory: Default
+#ces ci esr a moi, on doit pas les courir ici
+plot(z,lwd=2,col="red",xlab="Time",ylab="z",main="plotting Z")
+z
+#on peut voir ce qu'on a dans les data
+str(CYP)
+str(cy)
+#si on voudrais bien avoir bcp de plots dans R, alors. ICI on a quatre
 
-EnableCodeIndexing: Yes
-UseSpacesForTab: Yes
-NumSpacesForTab: 2
-Encoding: UTF-8
+par(mfrow= c(2,2))
+par(col="red")
+plot(CYP$Date, CYP$returns)
+plot(CYP$Date, CYP$High)
+plot(CYP$Date, CYP$Low)
+plot(CYP$Date, CYP$Volume)
 
-RnwWeave: Sweave
-LaTeX: pdfLaTeX
+#si on doit stack les emelents graphique
+plot(CYP$Date, CYP$returns)
+     pch=16, col=3,
+      xlab="Date"
+      ylab="return"
+
+#lm rejondre les linear fonctons 
+lm_ret <- lm(CYP$returns ~ CYP$Volume)
+
+
+#si on doit ajouter une ligne alors j'utilise abline
+abline(coef(lm_ret), lwd=2)
+
+points((lm_ret))
+
+
+
+
+
+
+##ici on trouves les aberantes de l'original data de la banque de cyprus
+# Les-trois-modeles-de-valeurs-aberrantes
+# vi kører det med outlier package.
+j'utilise que 3 mais il y'on a bcp d'autres
+str(CYP)
+dat<-CYP$Adj.Close
+dat
+n<-length(dat)
+n
+#Si on doit tRouver les returns:- 
+
+cy<-log(dat[2:n]/dat[1:(n-1)])
+length(cy)
+
+
+#trouvez les aberrantes: k difference from the mean
+
+
+aberrantes<- function (cy, opposite = FALSE, logical = FALSE) 
+{
+if (is.matrix(cy)) 
+apply(cy, 2, outlier, opposite = opposite, logical = logical)
+else if (is.data.frame(cy)) 
+sapply(cy, outlier, opposite = opposite, logical = logical)
+else {
+
+if (xor(((cy[length(cy)] - mean(cy)) < (mean(cy) - cy[1])),opposite)) 
+{
+if (!logical) min(cy)
+else cy == min(cy)
+}
+else 
+{
+if (!logical) max(cy)
+else cy == max(cy)
+}
+} 
+}
+
+aberrantes (cy, opposite = FALSE, logical = FALSE)
+
+
+
+#enlevez les aberrantes
+
+enlevez <- function (cy, fill = FALSE, median = FALSE, opposite = FALSE) 
+{
+if (is.matrix(cy)) 
+apply(cy, 2, enlevez, fill = fill, median = median, opposite = opposite)
+else if (is.data.frame(cy)) 
+as.data.frame(sapply(cy, enlevez, fill = fill, median = median, opposite = opposite))
+else {
+res <- cy
+if (!fill) res[-which(cy == aberrantes (x,opposite))]
+else {
+if (median) res[which(cy == aberrantes (x,opposite))]<-median(x[-which(x == outlier(x,opposite))])
+else res[which(x == outlier(cy,opposite))]<-mean(cy[-which(cy == aberrantes (cy,opposite))])
+res
+}
+}
+}
+
+enlevez (cy, fill = FALSE, median = FALSE, opposite = FALSE)
+
+cy
+length(cy)
+plot((cy), type="2")
+length(enlevez)
+
+
+
+#et puis on trouve les scores
+
+SC<- function (x, type = c("z","t","chisq","iqr","mad"), prob = NA, lim = NA) 
+{
+if (is.matrix(x)) 
+apply(cy, 2, scores, type = type, prob = prob, lim = lim)
+else if (is.data.frame(x)) 
+as.data.frame(sapply(cy, scores, type = type, prob = prob, lim = lim))
+else {
+n <- length(cy)
+s <- match.arg(type)
+ty <- switch(s, z=0, t=1, chisq=2, iqr=3, mad=4)
+
+if (ty == 0) {
+res <- (cy - mean(cy))/sd(cy)
+if (is.na(prob)) res
+else {
+if (prob == 1) pnorm(res)
+else	if (prob == 0) abs(res) > (n-1)/sqrt(n)
+else abs(res) > qnorm(prob)
+}
+}
+else if (ty == 1) {
+t <- (cy - mean(cy))/sd(cy)
+res <- (t*sqrt(n-2))/sqrt(n-1-t^2)
+if (is.na(prob)) res
+else {
+if (prob == 1) pt(res,n-2)
+else	if (prob == 0) abs(res) > (n-1)/sqrt(n)
+else abs(res) > qt(prob,n-2)
+}
+
+}
+else if (ty == 2) {
+res <- (cy - mean(cy))^2/var(cy)
+if (is.na(prob)) res
+else {
+if (prob == 1) pchisq(res,1)
+else abs(res) > qchisq(prob,1)
+}
+}
+else if (ty == 3) {
+res <- cy
+Q1 <- quantile(cy,0.25)
+Q3 <- quantile(cy,0.75)
+res[x > Q1 & res < Q3] <- 0
+res[x < Q1] <- (res[cy < Q1]-Q1)/IQR(x)
+res[x > Q3] <- (res[cy > Q3]-Q3)/IQR(x)
+if (is.na(lim)) res
+else abs(res) > lim
+}
+else if (ty == 4) {
+res <- (cy - median(cy))/mad(cy)
+if (is.na(prob)) res
+else {
+if (prob == 1) pnorm(res)
+else	if (prob == 0) abs(res) > (n-1)/sqrt(n)
+else abs(res) > qnorm(prob)
+}
+}
+
+}
+}
+
+SC(cy, type = c("z", "t", "chisq", "iqr", "mad"), prob = NA, lim = NA)
+
+
+score<-SC(cy, type = c("z", "t", "chisq", "iqr", "mad"), prob = NA, lim = NA)
+score
+plot(score)
+length(score)
